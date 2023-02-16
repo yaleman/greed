@@ -29,17 +29,11 @@ fn find_groups(value: Vec<DiceValues>) -> (Option<DiceGroup>, Vec<DiceValues>) {
     if value.len() == 6 {
         // look for six of a kind
         // look for greed
-        if value.clone().into_iter().any(|v| &v == &DiceValues::Gold)
-            && value.clone().into_iter().any(|v| &v == &DiceValues::Ruby)
-            && value
-                .clone()
-                .into_iter()
-                .any(|v| &v == &DiceValues::Emerald)
-            && value.clone().into_iter().any(|v| &v == &DiceValues::Ebony)
-            && value
-                .clone()
-                .into_iter()
-                .any(|v| &v == &DiceValues::Diamond)
+        if value.clone().into_iter().any(|v| v == DiceValues::Gold)
+            && value.clone().into_iter().any(|v| v == DiceValues::Ruby)
+            && value.clone().into_iter().any(|v| v == DiceValues::Emerald)
+            && value.clone().into_iter().any(|v| v == DiceValues::Ebony)
+            && value.clone().into_iter().any(|v| v == DiceValues::Diamond)
             && value.clone().into_iter().any(|v| v == DiceValues::Silver)
         {
             // we found a greed!
@@ -114,12 +108,7 @@ impl From<DiceValues> for u32 {
     }
 }
 
-impl DiceValues {
-    fn random() -> Self {
-        rand::random()
-    }
-}
-
+impl DiceValues {}
 
 impl Distribution<DiceValues> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> DiceValues {
@@ -130,11 +119,10 @@ impl Distribution<DiceValues> for Standard {
             3 => DiceValues::Gold,
             4 => DiceValues::Ruby,
             5 => DiceValues::Silver,
-            _ => panic!("impossible value!")
+            _ => panic!("impossible value!"),
         }
     }
 }
-
 
 #[derive(Clone, Debug, Default)]
 struct Dice {
@@ -144,7 +132,9 @@ struct Dice {
 impl Dice {
     // returns a random dice value
     fn roll() -> Dice {
-        Dice{ value: Some(random()) }
+        Dice {
+            value: Some(random()),
+        }
     }
 }
 
@@ -158,7 +148,6 @@ struct Player {
     // pub held_dice: Vec<DiceGroup>,
 }
 
-
 /// get six fresh dice
 fn new_dice() -> Vec<Dice> {
     let mut dice: Vec<Dice> = vec![];
@@ -171,31 +160,23 @@ fn new_dice() -> Vec<Dice> {
 impl Player {
     /// sets up a player's state for a new turn
     fn do_turn(self: &Player) {
+        let dice = new_dice();
 
-        let mut dice = new_dice();
-
-        let mut held_dice: Vec<DiceGroup> = vec![];
+        let _held_dice: Vec<DiceGroup> = vec![];
 
         // first roll
         println!("first roll: {dice:?}")
     }
 
-
     /// create a new player, for the start of the game
     fn new_with_name(name: &'static str) -> Self {
-        Player {
-            name,
-            score: 0,
-        }
+        Player { name, score: 0 }
     }
 }
 
 fn main() {
     // set up the list of players
-    let mut players = vec![
-        Player::new_with_name("Alice"),
-        Player::new_with_name("Bob"),
-    ];
+    let mut players = vec![Player::new_with_name("Alice"), Player::new_with_name("Bob")];
 
     let mut final_round = false;
     let mut final_round_triggered_by: Option<usize> = None;
@@ -212,9 +193,12 @@ fn main() {
             println!("It's {}'s turn", player.name);
 
             if final_round && final_round_triggered_by == Some(player_index) {
-                println!("{} triggered the final round, so the game is over!", player.name);
+                println!(
+                    "{} triggered the final round, so the game is over!",
+                    player.name
+                );
                 keep_playing = false;
-                break
+                break;
             }
 
             players[player_index].do_turn();
@@ -241,8 +225,6 @@ fn main() {
         // }
 
         // players have their turns
-
-
     }
     show_scoreboard(players);
 }
@@ -258,7 +240,6 @@ fn show_scoreboard(players: Vec<Player>) {
 }
 
 mod tests {
-
 
     #[test]
     pub fn test_for_greed_when_we_dont_have_greed() {
