@@ -1,4 +1,8 @@
-#[derive(Debug, Eq, PartialEq)]
+use rand::distributions::Standard;
+use rand::prelude::*;
+
+#[allow(dead_code)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 enum DiceGroup {
     /// four D's
     DQuad,
@@ -25,30 +29,18 @@ fn find_groups(value: Vec<DiceValues>) -> (Option<DiceGroup>, Vec<DiceValues>) {
     if value.len() == 6 {
         // look for six of a kind
         // look for greed
-        if value
-            .clone()
-            .into_iter()
-            .any(|v| &v == &DiceValues::Gold)
-            && value
-                .clone()
-                .into_iter()
-                .any(|v| &v == &DiceValues::Ruby)
+        if value.clone().into_iter().any(|v| &v == &DiceValues::Gold)
+            && value.clone().into_iter().any(|v| &v == &DiceValues::Ruby)
             && value
                 .clone()
                 .into_iter()
                 .any(|v| &v == &DiceValues::Emerald)
-            && value
-                .clone()
-                .into_iter()
-                .any(|v| &v == &DiceValues::Ebony)
+            && value.clone().into_iter().any(|v| &v == &DiceValues::Ebony)
             && value
                 .clone()
                 .into_iter()
                 .any(|v| &v == &DiceValues::Diamond)
-            && value
-                .clone()
-                .into_iter()
-                .any(|v| v == DiceValues::Silver)
+            && value.clone().into_iter().any(|v| v == DiceValues::Silver)
         {
             // we found a greed!
             return (Some(DiceGroup::Greed), vec![]);
@@ -101,6 +93,7 @@ impl From<DiceGroup> for u32 {
 
 /// this sets up the compiler to allow comparing different dice values
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[allow(dead_code)] // because they're randomly generated
 enum DiceValues {
     Gold,
     Ruby,
@@ -123,43 +116,75 @@ impl From<DiceValues> for u32 {
 
 impl DiceValues {
     fn random() -> Self {
-        DiceValues::Ebony
+        rand::random()
     }
 }
 
+
+impl Distribution<DiceValues> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> DiceValues {
+        match rng.gen_range(0..=5) {
+            0 => DiceValues::Diamond,
+            1 => DiceValues::Ebony,
+            2 => DiceValues::Emerald,
+            3 => DiceValues::Gold,
+            4 => DiceValues::Ruby,
+            5 => DiceValues::Silver,
+            _ => panic!("impossible value!")
+        }
+    }
+}
+
+
+#[derive(Clone, Debug, Default)]
 struct Dice {
     value: Option<DiceValues>,
 }
 
 impl Dice {
     // returns a random dice value
-    fn roll() -> Option<DiceValues> {
-        // TODO: fix this so it's random :)
-        Some(DiceValues::random())
+    fn roll() -> Dice {
+        Dice{ value: Some(random()) }
     }
 }
 
+#[derive(Debug, Clone)]
 struct Player {
-    pub name: String,
+    pub name: &'static str,
     pub score: u32,
-    /// dice we're using for this turn
-    pub dice: Vec<Dice>,
-    /// dice we're currently holding back... this isn't right at the moment
-    pub held_dice: Vec<DiceGroup>,
+    // /// dice we're using for this turn
+    // pub dice: Vec<Dice>,
+    // /// dice we're currently holding back... this isn't right at the moment
+    // pub held_dice: Vec<DiceGroup>,
+}
+
+
+/// get six fresh dice
+fn new_dice() -> Vec<Dice> {
+    let mut dice: Vec<Dice> = vec![];
+    for _ in 0..=5 {
+        dice.push(Dice::roll());
+    }
+    dice
 }
 
 impl Player {
     /// sets up a player's state for a new turn
-    fn new_turn(mut self: Player) {
-        self.dice = vec![];
+    fn do_turn(self: &Player) {
+
+        let mut dice = new_dice();
+
+        let mut held_dice: Vec<DiceGroup> = vec![];
+
+        // first roll
+        println!("first roll: {dice:?}")
     }
 
+
     /// create a new player, for the start of the game
-    fn new_with_name(name: String) -> Self {
+    fn new_with_name(name: &'static str) -> Self {
         Player {
             name,
-            dice: vec![],
-            held_dice: vec![],
             score: 0,
         }
     }
@@ -167,30 +192,77 @@ impl Player {
 
 fn main() {
     // set up the list of players
-    let players = vec![
-        Player::new_with_name("Alice".to_string()),
-        Player::new_with_name("Bob".to_string()),
+    let mut players = vec![
+        Player::new_with_name("Alice"),
+        Player::new_with_name("Bob"),
     ];
 
-    loop {
+    let mut final_round = false;
+    let mut final_round_triggered_by: Option<usize> = None;
+    let mut keep_playing = true;
+
+    while keep_playing {
+        let player_list = players.to_vec();
+
         // iterate through the players, letting them have a turn
-        // players.iter().map(|player| {
+        let player_iter = player_list.iter().enumerate();
+        for (player_index, player) in player_iter {
+            let mut rng = thread_rng();
+
+            println!("It's {}'s turn", player.name);
+
+            if final_round && final_round_triggered_by == Some(player_index) {
+                println!("{} triggered the final round, so the game is over!", player.name);
+                keep_playing = false;
+                break
+            }
+
+            players[player_index].do_turn();
+
+            let new_score: u32 = rng.gen_range(0..3000);
+
+            println!("Adding {} to {}", new_score, players[player_index].score);
+            players[player_index].score += new_score;
+
+            if player.score >= 5000 && final_round_triggered_by.is_none() {
+                final_round = true;
+                final_round_triggered_by = Some(player_index);
+                println!("Final round triggered by {}", player.name);
+            }
+        }
+        // | player| {
         //     player.new_turn();
         //     // ??
         // });
 
-        if players.iter().any(|p| p.score > 5000) {
-            println!("it was the last round!");
-            break;
-        }
+        // if players.iter().any(|p| p.score > 5000) {
+        //     println!("it is was the last round!");
+        //     break;
+        // }
+
+        // players have their turns
+
+
     }
+    show_scoreboard(players);
+}
+
+fn show_scoreboard(players: Vec<Player>) {
+    let mut temp_players = players;
+    temp_players.sort_by_key(|k| k.score);
+    // println!("{:?}", temp_players.reverse());
+    temp_players.reverse();
+    temp_players.clone().iter().for_each(|p| {
+        println!("{}\t{}", p.clone().score, p.name);
+    });
 }
 
 mod tests {
-    
+
 
     #[test]
     pub fn test_for_greed_when_we_dont_have_greed() {
+        use crate::{find_groups, DiceValues};
         let dicewehave = vec![
             DiceValues::Gold,
             DiceValues::Gold,
@@ -205,6 +277,7 @@ mod tests {
 
     #[test]
     pub fn test_for_greed_when_we_have_greed() {
+        use crate::{find_groups, DiceGroup, DiceValues};
         let dicewehave = vec![
             DiceValues::Gold,
             DiceValues::Ruby,
