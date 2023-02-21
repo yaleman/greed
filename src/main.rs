@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::iter::Map;
+
 use rand::distributions::Standard;
 use rand::prelude::*;
 
@@ -23,6 +26,33 @@ enum DiceGroup {
     },
 }
 
+fn count_die(dice: &Vec<DiceValues>) {
+
+    let foo = dice.iter().fold(
+        HashMap::default(),
+        |mut acc: HashMap<String, u32>, die| {
+            let diename = format!("{die:?}");
+            if !acc.contains_key(&diename.clone()) {
+                acc.insert(diename.clone(), 0);
+            }
+            let x = acc.get_mut(&diename).unwrap();
+            *x += 1;
+
+            // x.update_state_how_you_want;
+            acc
+        }
+    );
+    println!("### {foo:?}");
+    for key in foo.keys() {
+        if foo[key] == 6 {
+            println!("  Found 6 {key}s");
+        }
+        if foo[key] == 3 {
+            println!("  Found 3 {key}s");
+        }
+    }
+}
+
 fn find_groups(value: Vec<DiceValues>) -> (Option<DiceGroup>, Vec<DiceValues>) {
     // this allows us to go "we have these dice, is there a scoring group". here be dragons and headaches, least of which with my failure to spell.
     // we can find either greed or a six of a kind
@@ -43,6 +73,7 @@ fn find_groups(value: Vec<DiceValues>) -> (Option<DiceGroup>, Vec<DiceValues>) {
 
     if value.len() >= 4 {
         // we can probably find ... things.
+        count_die(&value);
     }
 
     if value.len() >= 3 {
@@ -108,6 +139,7 @@ impl From<DiceValues> for u32 {
     }
 }
 
+
 impl DiceValues {}
 
 impl Distribution<DiceValues> for Standard {
@@ -162,10 +194,26 @@ impl Player {
     fn do_turn(self: &Player) {
         let dice = new_dice();
 
-        let _held_dice: Vec<DiceGroup> = vec![];
+        let held_dice: Vec<DiceGroup> = vec![];
 
         // first roll
-        println!("first roll: {dice:?}")
+        println!("first roll: {dice:?}");
+
+        // loop through looking for results
+
+
+        let dicevalues = dice.into_iter().filter_map(|d| {
+            match d.value.is_some() {
+                true => d.value,
+                false => None
+            }
+        })
+            .collect();
+        let (group, leftovers) = find_groups(dicevalues);
+        if group.is_some() {
+            panic!("Found a group! {group:?} {leftovers:?}");
+        }
+        // println!("{:?}", res);
     }
 
     /// create a new player, for the start of the game
