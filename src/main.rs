@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::iter::Map;
+use std::fmt::Display;
 
 use rand::distributions::Standard;
 use rand::prelude::*;
@@ -26,16 +26,26 @@ enum DiceGroup {
     },
 }
 
-fn count_die(dice: &Vec<DiceValues>) {
+#[test]
+fn test_count_die() {
+    use crate::*;
+        let dice_holding = vec![
+        DiceValues::Ruby,
+        DiceValues::Ruby,
+        DiceValues::Ruby,
+    ];
+    println!("{:?}", count_die(&dice_holding));
+}
 
+fn count_die(dice: &Vec<DiceValues>) -> HashMap<DiceValues, u32> {
     let foo = dice.iter().fold(
         HashMap::default(),
-        |mut acc: HashMap<String, u32>, die| {
-            let diename = format!("{die:?}");
-            if !acc.contains_key(&diename.clone()) {
-                acc.insert(diename.clone(), 0);
+        |mut acc: HashMap<DiceValues, u32>, die| {
+            // let diename = format!("{die:?}");
+            if !acc.contains_key(&die.clone()) {
+                acc.insert(die.clone(), 0);
             }
-            let x = acc.get_mut(&diename).unwrap();
+            let x = acc.get_mut(&die).unwrap();
             *x += 1;
 
             // x.update_state_how_you_want;
@@ -51,6 +61,7 @@ fn count_die(dice: &Vec<DiceValues>) {
             println!("  Found 3 {key}s");
         }
     }
+    foo
 }
 
 fn find_groups(value: Vec<DiceValues>) -> (Option<DiceGroup>, Vec<DiceValues>) {
@@ -117,7 +128,7 @@ impl From<DiceGroup> for u32 {
 }
 
 /// this sets up the compiler to allow comparing different dice values
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 #[allow(dead_code)] // because they're randomly generated
 enum DiceValues {
     Gold,
@@ -126,6 +137,19 @@ enum DiceValues {
     Ebony,
     Diamond,
     Silver,
+}
+
+impl Display for DiceValues {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DiceValues::Gold => f.write_str("Gold"),
+            DiceValues::Ruby => f.write_str("Ruby"),
+            DiceValues::Emerald => f.write_str("Emerald"),
+            DiceValues::Ebony => f.write_str("Ebony"),
+            DiceValues::Diamond => f.write_str("Diamond"),
+            DiceValues::Silver => f.write_str("Silver"),
+        }
+    }
 }
 
 impl From<DiceValues> for u32 {
@@ -194,7 +218,7 @@ impl Player {
     fn do_turn(self: &Player) {
         let dice = new_dice();
 
-        let held_dice: Vec<DiceGroup> = vec![];
+        let _held_dice: Vec<DiceGroup> = vec![];
 
         // first roll
         println!("first roll: {dice:?}");
