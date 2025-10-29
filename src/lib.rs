@@ -33,11 +33,32 @@ pub enum DiceGroup {
     EGTrio,
     EBTrio,
     Greed,
-    SixOfAKind,
+    SixOfAKind(DiceValue),
     // Because you can hold a single dice
-    IndividualDice {
-        value: DiceValue,
-    },
+    IndividualDice(DiceValue),
+}
+
+impl From<DiceGroup> for Vec<DiceValue> {
+    fn from(value: DiceGroup) -> Self {
+        match value {
+            DiceGroup::DQuad => vec![DiceValue::Diamond; 4],
+            DiceGroup::GTrio => vec![DiceValue::Gold; 3],
+            DiceGroup::RTrio => vec![DiceValue::Ruby; 3],
+            DiceGroup::STrio => vec![DiceValue::Silver; 3],
+            DiceGroup::EGTrio => vec![DiceValue::Emerald; 3],
+            DiceGroup::EBTrio => vec![DiceValue::Ebony; 3],
+            DiceGroup::Greed => vec![
+                DiceValue::Gold,
+                DiceValue::Ruby,
+                DiceValue::Emerald,
+                DiceValue::Ebony,
+                DiceValue::Diamond,
+                DiceValue::Silver,
+            ],
+            DiceGroup::SixOfAKind(value) => vec![value; 6],
+            DiceGroup::IndividualDice(value) => vec![value],
+        }
+    }
 }
 
 fn count_die(dice: &[DiceValue]) -> HashMap<DiceValue, u32> {
@@ -75,6 +96,12 @@ fn find_groups(value: Vec<DiceValue>) -> (Vec<DiceGroup>, Vec<DiceValue>) {
         if value_set == *GREED {
             // we found a greed!
             return (vec![DiceGroup::Greed], vec![]);
+        }
+        if value_set.len() == 1 {
+            // six of a kind!
+            if let Some(value) = value_set.into_iter().next() {
+                return (vec![DiceGroup::SixOfAKind(value)], vec![]);
+            }
         }
     }
 
@@ -117,8 +144,8 @@ impl From<DiceGroup> for u32 {
             DiceGroup::EGTrio => 300,
             DiceGroup::EBTrio => 300,
             DiceGroup::Greed => 1000,
-            DiceGroup::SixOfAKind => 5000,
-            DiceGroup::IndividualDice { value } => value.into(),
+            DiceGroup::SixOfAKind(_) => 5000,
+            DiceGroup::IndividualDice(value) => value.into(),
         }
     }
 }
