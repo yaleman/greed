@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 
-use rand::distributions::Standard;
+use rand::distr::StandardUniform;
 use rand::prelude::*;
 
 #[allow(dead_code)]
@@ -29,39 +29,33 @@ enum DiceGroup {
 #[test]
 fn test_count_die() {
     use crate::*;
-        let dice_holding = vec![
-        DiceValues::Ruby,
-        DiceValues::Ruby,
-        DiceValues::Ruby,
-    ];
-    println!("{:?}", count_die(&dice_holding));
+    let dice_holding = vec![DiceValues::Ruby, DiceValues::Ruby, DiceValues::Ruby];
+    println!("holding={:?}", count_die(&dice_holding));
+    assert_eq!(dice_holding.len(), 3);
 }
 
-fn count_die(dice: &Vec<DiceValues>) -> HashMap<DiceValues, u32> {
-    let foo = dice.iter().fold(
+fn count_die(dice: &[DiceValues]) -> HashMap<DiceValues, u32> {
+    let res = dice.iter().fold(
         HashMap::default(),
         |mut acc: HashMap<DiceValues, u32>, die| {
             // let diename = format!("{die:?}");
-            if !acc.contains_key(&die.clone()) {
-                acc.insert(die.clone(), 0);
-            }
-            let x = acc.get_mut(&die).unwrap();
-            *x += 1;
+
+            acc.entry(*die).and_modify(|e| *e += 1).or_insert(1);
 
             // x.update_state_how_you_want;
             acc
-        }
+        },
     );
-    println!("### {foo:?}");
-    for key in foo.keys() {
-        if foo[key] == 6 {
+    println!("### {res:?}");
+    for key in res.keys() {
+        if res[key] == 6 {
             println!("  Found 6 {key}s");
         }
-        if foo[key] == 3 {
+        if res[key] == 3 {
             println!("  Found 3 {key}s");
         }
     }
-    foo
+    res
 }
 
 fn find_groups(value: Vec<DiceValues>) -> (Option<DiceGroup>, Vec<DiceValues>) {
@@ -128,7 +122,7 @@ impl From<DiceGroup> for u32 {
 }
 
 /// this sets up the compiler to allow comparing different dice values
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 #[allow(dead_code)] // because they're randomly generated
 enum DiceValues {
     Gold,
@@ -141,13 +135,19 @@ enum DiceValues {
 
 impl Display for DiceValues {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_ref())
+    }
+}
+
+impl AsRef<str> for DiceValues {
+    fn as_ref(&self) -> &str {
         match self {
-            DiceValues::Gold => f.write_str("Gold"),
-            DiceValues::Ruby => f.write_str("Ruby"),
-            DiceValues::Emerald => f.write_str("Emerald"),
-            DiceValues::Ebony => f.write_str("Ebony"),
-            DiceValues::Diamond => f.write_str("Diamond"),
-            DiceValues::Silver => f.write_str("Silver"),
+            DiceValues::Gold => "Gold",
+            DiceValues::Ruby => "Ruby",
+            DiceValues::Emerald => "Emerald",
+            DiceValues::Ebony => "Ebony",
+            DiceValues::Diamond => "Diamond",
+            DiceValues::Silver => "Silver",
         }
     }
 }
@@ -163,12 +163,11 @@ impl From<DiceValues> for u32 {
     }
 }
 
-
 impl DiceValues {}
 
-impl Distribution<DiceValues> for Standard {
+impl Distribution<DiceValues> for StandardUniform {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> DiceValues {
-        match rng.gen_range(0..=5) {
+        match rng.random_range(0..=5) {
             0 => DiceValues::Diamond,
             1 => DiceValues::Ebony,
             2 => DiceValues::Emerald,
@@ -189,7 +188,7 @@ impl Dice {
     // returns a random dice value
     fn roll() -> Dice {
         Dice {
-            value: Some(random()),
+            value: Some(rand::random()),
         }
     }
 }
@@ -225,13 +224,12 @@ impl Player {
 
         // loop through looking for results
 
-
-        let dicevalues = dice.into_iter().filter_map(|d| {
-            match d.value.is_some() {
+        let dicevalues = dice
+            .into_iter()
+            .filter_map(|d| match d.value.is_some() {
                 true => d.value,
-                false => None
-            }
-        })
+                false => None,
+            })
             .collect();
         let (group, leftovers) = find_groups(dicevalues);
         if group.is_some() {
@@ -260,7 +258,7 @@ fn main() {
         // iterate through the players, letting them have a turn
         let player_iter = player_list.iter().enumerate();
         for (player_index, player) in player_iter {
-            let mut rng = thread_rng();
+            let mut rng = rand::rng();
 
             println!("It's {}'s turn", player.name);
 
@@ -275,7 +273,7 @@ fn main() {
 
             players[player_index].do_turn();
 
-            let new_score: u32 = rng.gen_range(0..3000);
+            let new_score: u32 = rng.random_range(0..3000);
 
             println!("Adding {} to {}", new_score, players[player_index].score);
             players[player_index].score += new_score;
