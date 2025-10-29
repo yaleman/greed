@@ -19,7 +19,7 @@ static GREED: LazyLock<HashSet<DiceValue>> = LazyLock::new(|| {
     ])
 });
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum DiceGroup {
     /// four D's
     DQuad,
@@ -181,67 +181,57 @@ impl Distribution<DiceValue> for StandardUniform {
     }
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct Dice {
-    value: Option<DiceValue>,
-}
-
-impl Dice {
-    // returns a random dice value
-    pub fn roll() -> Dice {
-        Dice {
-            value: Some(rand::random()),
-        }
+impl Default for DiceValue {
+    fn default() -> Self {
+        rand::random()
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Player {
-    pub name: &'static str,
+    pub name: String,
     pub score: u32,
+    pub hand: Vec<DiceGroup>,
     // /// dice we're using for this turn
-    // pub dice: Vec<Dice>,
+    pub dice: Vec<DiceValue>,
     // /// dice we're currently holding back... this isn't right at the moment
     // pub held_dice: Vec<DiceGroup>,
+    pub had_first_go: bool,
 }
 
-/// get six fresh dice
-fn new_dice() -> Vec<Dice> {
-    let mut dice: Vec<Dice> = vec![];
-    for _ in 0..=5 {
-        dice.push(Dice::roll());
-    }
-    dice
-}
+const MAX_DICE: usize = 6;
 
 impl Player {
-    /// sets up a player's state for a new turn
-    pub fn do_turn(self: &Player) {
-        let dice = new_dice();
-
-        let _held_dice: Vec<DiceGroup> = vec![];
-
-        // first roll
-        println!("first roll: {dice:?}");
-
-        // loop through looking for results
-
-        let dicevalues = dice
-            .into_iter()
-            .filter_map(|d| match d.value.is_some() {
-                true => d.value,
-                false => None,
-            })
+    /// sets up a player's state for a new turn, returns true if they found a group
+    pub fn do_turn(self: &mut Player) -> bool {
+        self.dice = (0..MAX_DICE - self.hand.len())
+            .map(|_| rand::random())
             .collect();
-        let (group, leftovers) = find_groups(dicevalues);
-        if !group.is_empty() {
-            panic!("Found a group! {group:?} {leftovers:?}");
+        if !self.had_first_go {
+            println!("{} is starting their first turn!", self.name);
+            self.had_first_go = true;
+        } else {
+            println!("{}'s Hand: {:?}", self.name, self.hand);
         }
-        // println!("{:?}", res);
+        println!("Current dice on the table: {:?}", self.dice);
+
+        let (group, leftovers) = find_groups(self.dice.clone());
+        if !group.is_empty() {
+            println!("Found a group! {group:?} {leftovers:?}");
+            self.score += group.iter().map(|g| u32::from(*g)).sum::<u32>();
+            self.hand.extend(group);
+        }
+        !self.hand.is_empty()
     }
 
     /// create a new player, for the start of the game
-    pub fn new_with_name(name: &'static str) -> Self {
-        Player { name, score: 0 }
+    pub fn new(name: impl ToString) -> Self {
+        Player {
+            name: name.to_string(),
+            score: 0,
+            had_first_go: false,
+            hand: Vec::new(),
+            dice: Vec::new(),
+        }
     }
 }
